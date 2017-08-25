@@ -1,0 +1,151 @@
+So, in this lecture, uh, we will discuss some
+of the important properties of failure detectors and we'll see, ah, some very
+simple failure detectors. Just to remind you again, uh, we have a large group
+of processes and, uh, you have the same, uh,
+algorithm or protocol running at each of the processes in the system. You might consider the protocol running
+at only a given process, pi, because the same thing
+is running at all processes. Their communication-
+the communication is over an unreliable network. So once again,
+if a process pj crashes, we need the failure detector
+to detect, ah, this, ah, failure at at least one process
+in the system, perhaps even multiple
+processes in the system. So the fact the pj
+crashes is, uh, inevitable. Uh, all processes, uh, crash
+at some point of time, and as we have seen before, this is a frequent occurrence
+in a large scale data center. This is the, uh,
+common case and the norm rather than the exception, ah, and the frequency goes up
+linearly, ah, with the size
+of the data center, the frequency of failures. There are two important
+correctness properties for failure detectors. They are known
+as completeness and accuracy. Completeness essentially says
+that when a process fails that process
+is detected, eventually, by at least one other
+non-faulty process. And there are two
+important, ah, terms there. The first is that it is detected
+by a non-faulty process. Detection by a faulty process really doesn't make
+a difference. Um, uh, the second important,
+uh, term is eventually. This means that, there is no
+time bound, as of now at least on when the, uh, process, uh,
+is detected as having failed. The second is, um, kind
+of the converse but not really. It's known as accuracy
+which essentially says that, uh, when a process
+is detected as having failed, that process has in fact failed. In other words, it says that there are no
+mistaken failure detections or there
+are no false positives. There are also two other
+performance criteria. We'll discuss that
+in a little bit. But let's focus on just these
+two important, uh, criteria. The bad news is that achieving
+both of these, uh, properties, completeness and accuracy, over a network which, uh,
+loses packets, which can delay packets
+quite a bit, is impossible. In other words,
+over the Internet or the wireless networks
+that we have today, or any realistic network, you cannot build
+a failure detector that is 100% complete,
+meaning it detects all failures and also 100% accurate, meaning it never makes
+any mistakes. Essentially this boils down
+to the fact that the failure detector problem is equivalent to another well-known problem in distributed, ah-ah, computing
+known as consensus. In the consensus problem,
+which you will see, ah, elsewhere in, uh, the course, essentially you have
+a group of processes that are trying to decide
+on the value of a single bit, and, uh, there is
+a well-known proof that shows that
+this is impossible to do over lossy and, uh,
+delayed networks. So what happens in real life? Uh, in real life, failure detectors always
+guarantee completeness 100% of the time. And so they have to punt
+on the accuracy, which means that the accuracy guarantee is either partial or it's a
+probabilistic guarantee, always close to 100%, but never, nah- getting exactly at 100%. Uh, why is this tradeoff, uh,
+the right tradeoff? Well, you need completeness,
+because when you have a failure, you definitely want
+to be able to detect it and, uh, recover from it, make
+your data consistent again. You don't want to, uh,
+miss any failures. However, if you mistakenly
+detect a failure, it's fine, uh, for you to ask
+that poor, uh, victim process to leave the system
+and rejoin again, perhaps at a
+different identifier. The overhead
+of doing that is less than if you did the reverse. All the failure detectors we'll study have, uh, this property of, uh, 100% completeness and
+less than 100% accuracy. There are two other properties, uh, that are important
+for performance of failure detector's,
+speed is first one. The speed basically says that between the time when
+a failure actually happens and the first other non-faulty
+process detects this failure we want that time
+to first detection of failure to be as small as possible. You want your system
+to be responsive. Uh, scale is important because
+you want your system to scale as the number of processes
+in your group grows. This means that you want to have a low and equally
+distributed load in terms of number
+of messages on each process or member in your group. Also, uh, you want
+low overall network load in terms of the number
+of messages. Also you want to avoid
+single points of failure. You want to avoid bottlenecks. And you want to guarantee
+all of these properties in spite of the fact that you might have arbitrary
+simultaneous process failures. So it's not given to you
+that one process fails, your failure detector detects it
+and then the next process fails. Multiple processes
+might fail simultaneously and your failure detector must capture all of these failures. So let's say a very simple
+failure detector protocol known as, ah,
+centralized heartbeating. The basic concept
+here is heartbeating. Consider the process pi, ah, which needs to be, ah, detected
+as, uh, having failed. Essentially what it does is that
+it sends periodic heartbeats to another process pj. A heartbeat is basically
+a message that carries a sequence number. Every time pi sends
+a heartbeat to pj, it increments
+this local sequence number and sends it over. Heartbeats are sent
+periodically, say once every T seconds. pj keeps, uh, track of when
+the last heartbeat from pi was received. If a new heartbeat
+has not been received, ah, within a specified timeout, then it marks pi
+as having failed. The centralized heartbeating
+version of this protocol ensures that all the other N-1
+processes in the system send heartbeats
+to one central process pj. So the nice thing about this is that if any
+of these other processes fail, any of the other
+N-1 processes fail, their heartbeats
+will stop arriving at pj and pj will time out and mark that process as having failed. So, uh, this protocol
+for all the other N-1 processes, other than pj it is complete. However, when pj fails, there is no guarantee
+about who detects its failure. Also, the other, uh,
+disadvantage here is that if you have thousands
+of processes in your group, uh, pj might be highly overloaded with, uh, messages. A variant is, uh,
+the ring heartbeating where all the processes are organized in a virtual ring and every process sends heartbeats to its, to at least
+one of its neighbors. In this particular picture each
+process sends heartbeats to its left neighbor as well
+as its, uh, right neighbor or its anticlockwise as well
+as its clockwise neighbor. The quality of the heartbeats
+is the same. Again it's the sequence number
+that is incremented, uh, locally and then sent over and the quality of the detection
+is again the same, with pj timesout waiting
+for pi's heartbeats then it marks pi
+as having failed. So this is better than
+the centralized approach because it avoids a hot spot,
+but it's still not good enough because, uh, when you have multiple failures, you might have some failures that go undetected. Consider the situation
+where, uh, both of pi's, uh, anticlockwise
+and clockwise neighbors fail and before the ring is, uh,
+repaired, then pi fails. At this point of time, pi's
+failure might go undetected because both its neighbors
+were down when pi failed. Of course, repairing the ring
+is also another overhead which you have to deal
+with over here in the ring
+heartbeating approach. The third heartbeating approach is called
+all-to-all heartbeating where pi, each process pi,
+sends out heartbeats, uh, not to one or two other
+processes in the system, but to all the other processes
+in the system. And the processes do likewise. They timeout waiting for
+heartbeats and if they timeout, then they mark the corresponding
+process as having failed. So if pj times out waiting
+for pi's heartbeats, it marks pi as having failed. This is pretty good. Uh, first of all it has
+an equal load per member. The load is kind of high and we'll get to, uh,
+the load later on and why this might
+actually be not so bad. Ah, but we'll-we'll see
+that later on. First of all, uh,
+the load is equal. It's well distributed
+across all. Second the protocol is complete. If pi fails, then as long as there is at least one other non-faulty process in the group, it will time out waiting
+for pi's heartbeats and at this mark it will detect
+pi as having failed, so it is complete for sure. So next lecture we'll see how
+to increase the robustness of all-to-all heartbeating. Uh, essentially the problem
+with all-to-all heartbeating is that if you have one, uh, process, uh, pj that is slow and is receiving packets
+at longer delay than others, it might end up marking
+all the other or almost all the other
+processes as having failed with a higher probability and so you might have
+a lower accuracy or a very high rate
+of false positives in all-to-all heart beating. You can improve this by using more robust ways
+of sending out the heartbeat rather than
+just direct messages.
